@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Team Backtest Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #1e1e2e;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid #2d2d44;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px;
+            text-align: center;
+            border-bottom: 1px solid #2d2d44;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #252538;
+            padding: 32px;
+            border-right: 1px solid #2d2d44;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #b8b8d1;
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #3d3d54;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #1e1e2e;
+            color: #e0e0e0;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .input-group input::placeholder {
+            color: #6c6c8a;
+        }
+
+        .ratio-indicator {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .ratio-indicator.yellow {
+            background: #ffc107;
+        }
+
+        .ratio-indicator.red {
+            background: #dc3545;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #4a4a6a;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a5a7a;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 2px solid #2d2d44;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            color: #9a9ab8;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .stat-value.positive {
+            color: #4ade80;
+        }
+
+        .stat-value.negative {
+            color: #f87171;
+        }
+
+        .chart-container {
+            padding: 32px;
+            position: relative;
+            height: 600px;
+            background: #1e1e2e;
+        }
+
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #252538;
+            border-radius: 12px;
+            border: 1px solid #2d2d44;
+        }
+
+        .legend-item {
+            color: #e0e0e0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .samples-list {
+            margin-top: 24px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .samples-list h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #b8b8d1;
+        }
+
+        .sample-item {
+            padding: 8px 12px;
+            background: #1e1e2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            border-left: 3px solid #667eea;
+            border: 1px solid #2d2d44;
+            color: #e0e0e0;
+            position: relative;
+        }
+
+        .delete-sample-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .delete-sample-btn:hover {
+            opacity: 1;
+        }
+
+        .sample-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .sample-item-details {
+            display: flex;
+            gap: 16px;
+            color: #9a9ab8;
+        }
+
+        .ratio-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .ratio-badge.yellow {
+            background: #fbbf24;
+            color: #1a1a2e;
+        }
+
+        .ratio-badge.red {
+            background: #f87171;
+            color: #1a1a2e;
+        }
+
+        .ratio-badge.green {
+            background: #4ade80;
+            color: #1a1a2e;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #2d2d44;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Public Team Backtest Calculator</h1>
+            <p>Track profitability of betting against public teams over time</p>
+        </div>
+        <div class="content">
+            <div class="sidebar">
+                <div class="input-group">
+                    <label for="spread">Underdog Spread</label>
+                    <input type="number" id="spread" step="0.5" placeholder="e.g., 3.5">
+                </div>
+                <div class="input-group">
+                    <label for="moneyline">Underdog Moneyline Odds</label>
+                    <input type="number" id="moneyline" step="1" placeholder="e.g., 150 (means +150)">
+                </div>
+                <div class="input-group">
+                    <label for="ratio">Public Ratio (Favorite Inflation)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="ratio" step="0.1" min="0" placeholder="e.g., 3.5">
+                        <span class="ratio-indicator" id="ratioIndicator"></span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="unitSize">Unit Size ($)</label>
+                    <input type="number" id="unitSize" step="1" min="1" value="100" placeholder="e.g., 100">
+                </div>
+                <div class="input-group">
+                    <label for="date">Date</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="date" placeholder="e.g., 30.11.25" pattern="\d{1,2}\.\d{1,2}\.\d{2,4}">
+                        <span id="dayIndicator" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #9a9ab8; pointer-events: none;"></span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="sport">Sport</label>
+                    <select id="sport" style="width: 100%; padding: 12px 16px; border: 2px solid #3d3d54; border-radius: 12px; font-size: 16px; background: #1e1e2e; color: #e0e0e0;">
+                        <option value="NFL">NFL</option>
+                        <option value="NHL">NHL</option>
+                        <option value="NBA">NBA</option>
+                        <option value="MLB">MLB</option>
+                        <option value="WNBA">WNBA</option>
+                        <option value="NCAAF">NCAAF</option>
+                        <option value="NCAAB">NCAAB</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="popularNumber">Popular Number</label>
+                    <input type="number" id="popularNumber" step="0.5" placeholder="e.g., 3.5">
+                </div>
+                <div class="input-group">
+                    <label for="spreadResult">Underdog Covered Spread?</label>
+                    <select id="spreadResult" style="width: 100%; padding: 12px 16px; border: 2px solid #3d3d54; border-radius: 12px; font-size: 16px; background: #1e1e2e; color: #e0e0e0;">
+                        <option value="win">Yes (Covered)</option>
+                        <option value="loss">No (Didn't Cover)</option>
+                        <option value="push">Push (game differential = spread)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="moneylineResult">Underdog Won?</label>
+                    <select id="moneylineResult" style="width: 100%; padding: 12px 16px; border: 2px solid #3d3d54; border-radius: 12px; font-size: 16px; background: #1e1e2e; color: #e0e0e0;">
+                        <option value="win">Yes (Won)</option>
+                        <option value="loss">No (Lost)</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="addSample">Add Sample</button>
+                    <button class="btn btn-secondary" id="clearData">Clear</button>
+                </div>
+                <div class="button-group" style="margin-top: 12px;">
+                    <button class="btn btn-secondary" id="testSync" style="font-size: 12px; padding: 8px 16px;">Test Google Sheets Sync</button>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Samples:</span>
+                        <span class="stat-value" id="sampleCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Moneyline Profit:</span>
+                        <span class="stat-value" id="mlProfit">$0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Spread Profit:</span>
+                        <span class="stat-value" id="spreadProfit">$0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">ML Units:</span>
+                        <span class="stat-value" id="mlUnits">+0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Spread Units:</span>
+                        <span class="stat-value" id="spreadUnits">+0.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">ML ROI:</span>
+                        <span class="stat-value" id="mlROI">0.00%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Spread ROI:</span>
+                        <span class="stat-value" id="spreadROI">0.00%</span>
+                    </div>
+                </div>
+                <div class="samples-list">
+                    <h3>All Samples</h3>
+                    <div id="samplesList"></div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #667eea;"></div>
+                        <span>Moneyline Profit</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f093fb;"></div>
+                        <span>Spread Profit</span>
+                    </div>
+                </div>
+                <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart setup
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        let profitChart;
+
+        // Data storage
+        let samples = [];
+        let mlProfitHistory = [0];
+        let spreadProfitHistory = [0];
+        let sampleNumbers = [0];
+
+        // Initialize chart
+        function initChart() {
+            profitChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sampleNumbers,
+                    datasets: [
+                        {
+                            label: 'Moneyline Profit',
+                            data: mlProfitHistory,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.15)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#667eea',
+                            pointBorderColor: '#1e1e2e',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'Spread Profit',
+                            data: spreadProfitHistory,
+                            borderColor: '#f093fb',
+                            backgroundColor: 'rgba(240, 147, 251, 0.15)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#f093fb',
+                            pointBorderColor: '#1e1e2e',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(30, 30, 46, 0.95)',
+                            padding: 12,
+                            titleColor: '#e0e0e0',
+                            bodyColor: '#e0e0e0',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sample Number',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                color: '#b8b8d1'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9a9ab8'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Profit ($)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                color: '#b8b8d1'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9a9ab8',
+                                callback: function(value) {
+                                    return '$' + value.toFixed(0);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // Update ratio indicator
+        function updateRatioIndicator() {
+            const ratio = parseFloat(document.getElementById('ratio').value) || 0;
+            const indicator = document.getElementById('ratioIndicator');
+            
+            if (ratio >= 5.0) {
+                indicator.className = 'ratio-indicator red';
+            } else if (ratio >= 2.0) {
+                indicator.className = 'ratio-indicator yellow';
+            } else {
+                indicator.className = 'ratio-indicator';
+            }
+        }
+
+        // Parse date and get day of week
+        function getDayOfWeek(dateString) {
+            if (!dateString || !dateString.includes('.')) {
+                return null;
+            }
+            
+            try {
+                const parts = dateString.split('.');
+                if (parts.length !== 3) return null;
+                
+                let day = parseInt(parts[0]);
+                let month = parseInt(parts[1]) - 1; // JavaScript months are 0-indexed
+                let year = parseInt(parts[2]);
+                
+                // Handle 2-digit years (assume 2000s if < 50, 1900s if >= 50)
+                if (year < 100) {
+                    year = year < 50 ? 2000 + year : 1900 + year;
+                }
+                
+                const date = new Date(year, month, day);
+                
+                // Validate the date
+                if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                    return null;
+                }
+                
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                return days[date.getDay()];
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Auto-format date input
+        function formatDateInput(e) {
+            const input = e.target;
+            const cursorPos = input.selectionStart;
+            let value = input.value.replace(/[^\d]/g, ''); // Remove all non-digits
+            
+            // Track how many digits were before cursor
+            const digitsBeforeCursor = input.value.substring(0, cursorPos).replace(/[^\d]/g, '').length;
+            
+            // Add dots automatically
+            let formatted = '';
+            for (let i = 0; i < value.length; i++) {
+                if (i === 2) {
+                    formatted += '.';
+                } else if (i === 4) {
+                    formatted += '.';
+                }
+                formatted += value[i];
+                if (i >= 8) break; // Limit to DD.MM.YYYY format
+            }
+            
+            // Update the input value
+            input.value = formatted;
+            
+            // Calculate new cursor position
+            let newCursorPos = 0;
+            let digitCount = 0;
+            for (let i = 0; i < formatted.length; i++) {
+                if (formatted[i] !== '.') {
+                    digitCount++;
+                }
+                newCursorPos = i + 1;
+                if (digitCount >= digitsBeforeCursor) {
+                    break;
+                }
+            }
+            
+            // Set cursor position
+            input.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Update day indicator
+            updateDayIndicator();
+        }
+
+        // Update day indicator
+        function updateDayIndicator() {
+            const dateInput = document.getElementById('date').value;
+            const indicator = document.getElementById('dayIndicator');
+            const dayOfWeek = getDayOfWeek(dateInput);
+            
+            if (dayOfWeek) {
+                indicator.textContent = dayOfWeek;
+                indicator.style.color = '#4ade80';
+            } else if (dateInput) {
+                indicator.textContent = 'Invalid';
+                indicator.style.color = '#f87171';
+            } else {
+                indicator.textContent = '';
+            }
+        }
+
+        // Calculate profit for moneyline
+        function calculateMLProfit(moneyline, unitSize, result) {
+            if (result === 'win') {
+                // Convert American odds to decimal, then calculate profit
+                if (moneyline > 0) {
+                    return (moneyline / 100) * unitSize;
+                } else {
+                    return (100 / Math.abs(moneyline)) * unitSize;
+                }
+            } else if (result === 'loss') {
+                return -unitSize;
+            }
+            return 0; // push (shouldn't happen for ML)
+        }
+
+        // Calculate profit for spread
+        function calculateSpreadProfit(unitSize, result) {
+            if (result === 'win') {
+                // Spread bets pay -105, so profit is (100/105) * unitSize
+                return (100 / 105) * unitSize;
+            } else if (result === 'loss') {
+                return -unitSize;
+            }
+            return 0; // push
+        }
+
+        // Get ratio badge class
+        function getRatioBadgeClass(ratio) {
+            if (ratio >= 5.0) return 'red';
+            if (ratio >= 2.0) return 'yellow';
+            return 'green';
+        }
+
+        // Save samples to localStorage
+        function saveSamples() {
+            try {
+                localStorage.setItem('backtestSamples', JSON.stringify(samples));
+            } catch (e) {
+                console.error('Error saving samples:', e);
+            }
+        }
+
+        // Load samples from localStorage
+        function loadSamples() {
+            try {
+                const saved = localStorage.getItem('backtestSamples');
+                if (saved) {
+                    samples = JSON.parse(saved);
+                    rebuildProfitHistory();
+                }
+            } catch (e) {
+                console.error('Error loading samples:', e);
+            }
+        }
+
+        // Rebuild profit history from samples
+        function rebuildProfitHistory() {
+            mlProfitHistory = [0];
+            spreadProfitHistory = [0];
+            sampleNumbers = [0];
+
+            samples.forEach((sample, index) => {
+                const newMLProfit = mlProfitHistory[mlProfitHistory.length - 1] + sample.mlProfit;
+                const newSpreadProfit = spreadProfitHistory[spreadProfitHistory.length - 1] + sample.spreadProfit;
+                
+                // Update cumulative values in sample
+                sample.mlCumulative = newMLProfit;
+                sample.spreadCumulative = newSpreadProfit;
+                
+                mlProfitHistory.push(newMLProfit);
+                spreadProfitHistory.push(newSpreadProfit);
+                sampleNumbers.push(index + 1);
+            });
+
+            // Update chart
+            if (profitChart) {
+                profitChart.data.labels = sampleNumbers;
+                profitChart.data.datasets[0].data = mlProfitHistory;
+                profitChart.data.datasets[1].data = spreadProfitHistory;
+                profitChart.update('none');
+            }
+
+            updateStats();
+            updateSamplesList();
+        }
+
+        // Delete a sample
+        function deleteSample(index) {
+            if (confirm('Are you sure you want to delete this sample?')) {
+                samples.splice(index, 1);
+                rebuildProfitHistory();
+                saveSamples();
+                pushToSheet(); // Sync deletion to sheet
+            }
+        }
+
+        // Add sample
+        function addSample() {
+            const spread = parseFloat(document.getElementById('spread').value);
+            const moneyline = parseFloat(document.getElementById('moneyline').value);
+            const ratio = parseFloat(document.getElementById('ratio').value);
+            const unitSize = parseFloat(document.getElementById('unitSize').value) || 100;
+            const dateInput = document.getElementById('date').value;
+            const sport = document.getElementById('sport').value;
+            const popularNumber = parseFloat(document.getElementById('popularNumber').value);
+            const spreadResult = document.getElementById('spreadResult').value;
+            const moneylineResult = document.getElementById('moneylineResult').value;
+
+            if (!spread || !moneyline || !ratio || !unitSize || !popularNumber || !dateInput) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Calculate day of week from date
+            const day = getDayOfWeek(dateInput);
+            if (!day) {
+                alert('Please enter a valid date in format DD.MM.YY (e.g., 30.11.25)');
+                return;
+            }
+
+            // Calculate profits
+            const mlProfit = calculateMLProfit(moneyline, unitSize, moneylineResult);
+            const spreadProfit = calculateSpreadProfit(unitSize, spreadResult);
+
+            // Update cumulative profits
+            const newMLProfit = mlProfitHistory[mlProfitHistory.length - 1] + mlProfit;
+            const newSpreadProfit = spreadProfitHistory[spreadProfitHistory.length - 1] + spreadProfit;
+
+            // Store sample
+            const sample = {
+                spread,
+                moneyline,
+                ratio,
+                unitSize,
+                date: dateInput,
+                day,
+                sport,
+                popularNumber,
+                spreadResult,
+                moneylineResult,
+                mlProfit,
+                spreadProfit,
+                mlCumulative: newMLProfit,
+                spreadCumulative: newSpreadProfit
+            };
+
+            samples.push(sample);
+
+            // Update history
+            mlProfitHistory.push(newMLProfit);
+            spreadProfitHistory.push(newSpreadProfit);
+            sampleNumbers.push(sampleNumbers.length);
+
+            // Update chart
+            profitChart.data.labels = sampleNumbers;
+            profitChart.data.datasets[0].data = mlProfitHistory;
+            profitChart.data.datasets[1].data = spreadProfitHistory;
+            profitChart.update('none');
+
+            // Update stats
+            updateStats();
+
+            // Update samples list
+            updateSamplesList();
+
+            // Save to localStorage
+            saveSamples();
+
+            // Push to Google Sheets
+            pushToSheet();
+
+            // Clear inputs (keep unit size and selects)
+            document.getElementById('spread').value = '';
+            document.getElementById('moneyline').value = '';
+            document.getElementById('ratio').value = '';
+            document.getElementById('date').value = '';
+            document.getElementById('popularNumber').value = '';
+            updateRatioIndicator();
+            updateDayIndicator();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const sampleCount = samples.length;
+            const totalMLProfit = mlProfitHistory[mlProfitHistory.length - 1];
+            const totalSpreadProfit = spreadProfitHistory[spreadProfitHistory.length - 1];
+
+            // Calculate ROI
+            const totalMLRisk = samples.reduce((sum, s) => sum + s.unitSize, 0);
+            const totalSpreadRisk = samples.reduce((sum, s) => {
+                if (s.spreadResult !== 'push') return sum + s.unitSize;
+                return sum;
+            }, 0);
+
+            const mlROI = totalMLRisk > 0 ? (totalMLProfit / totalMLRisk) * 100 : 0;
+            const spreadROI = totalSpreadRisk > 0 ? (totalSpreadProfit / totalSpreadRisk) * 100 : 0;
+
+            // Calculate average unit size for units calculation
+            const avgUnitSize = sampleCount > 0 ? totalMLRisk / sampleCount : 100;
+            const mlUnits = avgUnitSize > 0 ? totalMLProfit / avgUnitSize : 0;
+            const spreadUnits = avgUnitSize > 0 ? totalSpreadProfit / avgUnitSize : 0;
+
+            document.getElementById('sampleCount').textContent = sampleCount;
+            document.getElementById('mlProfit').textContent = '$' + totalMLProfit.toFixed(2);
+            document.getElementById('mlProfit').className = 'stat-value ' + (totalMLProfit >= 0 ? 'positive' : 'negative');
+            document.getElementById('spreadProfit').textContent = '$' + totalSpreadProfit.toFixed(2);
+            document.getElementById('spreadProfit').className = 'stat-value ' + (totalSpreadProfit >= 0 ? 'positive' : 'negative');
+            document.getElementById('mlUnits').textContent = (mlUnits >= 0 ? '+' : '') + mlUnits.toFixed(2);
+            document.getElementById('mlUnits').className = 'stat-value ' + (mlUnits >= 0 ? 'positive' : 'negative');
+            document.getElementById('spreadUnits').textContent = (spreadUnits >= 0 ? '+' : '') + spreadUnits.toFixed(2);
+            document.getElementById('spreadUnits').className = 'stat-value ' + (spreadUnits >= 0 ? 'positive' : 'negative');
+            document.getElementById('mlROI').textContent = mlROI.toFixed(2) + '%';
+            document.getElementById('mlROI').className = 'stat-value ' + (mlROI >= 0 ? 'positive' : 'negative');
+            document.getElementById('spreadROI').textContent = spreadROI.toFixed(2) + '%';
+            document.getElementById('spreadROI').className = 'stat-value ' + (spreadROI >= 0 ? 'positive' : 'negative');
+        }
+
+        // Update samples list
+        function updateSamplesList() {
+            const list = document.getElementById('samplesList');
+            // Show all samples, most recent first
+            const allSamples = [...samples].reverse();
+            
+            list.innerHTML = allSamples.map((sample, idx) => {
+                const actualIndex = samples.length - 1 - idx; // Original index for deletion
+                const ratioBadge = `<span class="ratio-badge ${getRatioBadgeClass(sample.ratio)}">${sample.ratio.toFixed(1)}x</span>`;
+                const spreadResultColor = sample.spreadResult === 'win' ? '#4ade80' : sample.spreadResult === 'loss' ? '#f87171' : '#9a9ab8';
+                const mlResultColor = sample.moneylineResult === 'win' ? '#4ade80' : '#f87171';
+                return `
+                    <div class="sample-item">
+                        <button class="delete-sample-btn" data-index="${actualIndex}" title="Delete sample">×</button>
+                        <div class="sample-item-header">
+                            Sample #${samples.length - idx} ${ratioBadge}
+                            <div style="display: flex; gap: 12px;">
+                                <span style="color: ${spreadResultColor}">
+                                    Spread: ${sample.spreadResult.toUpperCase()}
+                                </span>
+                                <span style="color: ${mlResultColor}">
+                                    ML: ${sample.moneylineResult.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="sample-item-details">
+                            <span>${sample.sport || 'N/A'}</span>
+                            <span>${sample.date || 'N/A'}</span>
+                            <span>${sample.day || 'N/A'}</span>
+                            <span>Pop: ${sample.popularNumber || 'N/A'}</span>
+                            <span>Spread: ${sample.spread > 0 ? '+' : ''}${sample.spread}</span>
+                            <span>ML: ${sample.moneyline > 0 ? '+' : ''}${sample.moneyline}</span>
+                            <span>ML: $${sample.mlCumulative.toFixed(2)}</span>
+                            <span>Spread: $${sample.spreadCumulative.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (samples.length === 0) {
+                list.innerHTML = '<p style="color: #9a9ab8; font-size: 14px; text-align: center; padding: 20px;">No samples yet. Add your first sample to begin tracking.</p>';
+            }
+        }
+
+        // Clear all data
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                samples = [];
+                mlProfitHistory = [0];
+                spreadProfitHistory = [0];
+                sampleNumbers = [0];
+
+                profitChart.data.labels = sampleNumbers;
+                profitChart.data.datasets[0].data = mlProfitHistory;
+                profitChart.data.datasets[1].data = spreadProfitHistory;
+                profitChart.update();
+
+                updateStats();
+                updateSamplesList();
+                saveSamples();
+                pushToSheet(); // Sync clear to sheet
+            }
+        }
+
+        // Google Sheets Sync
+        // Auto-detect the script URL (works when hosted via Google Apps Script)
+        const DEPLOYMENT_ID = 'AKfycbw309i947Ye3hdq_5x4KY4KL3eqZT3d4NoHFt5jQcyalfPplp5l8DWgphTj5FJEleCZ';
+        // If running from Google Apps Script HTML Service, use the same script URL
+        const isHosted = window.location.href.includes('script.google.com');
+        const WEB_APP_URL = isHosted 
+            ? window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/exec')
+            : `https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec`;
+
+        // Test Google Sheets connection
+        async function testSync() {
+            console.log('=== Testing Google Sheets Sync ===');
+            console.log('Web App URL:', WEB_APP_URL);
+            console.log('Current samples:', samples.length);
+            
+            try {
+                // First test: Try to read
+                console.log('Test 1: Reading from sheet...');
+                const readResponse = await fetch(`${WEB_APP_URL}?action=read`);
+                const readText = await readResponse.text();
+                console.log('Read response:', readText);
+                
+                let readResult;
+                try {
+                    readResult = JSON.parse(readText);
+                    console.log('Read result:', readResult);
+                    if (readResult.success) {
+                        alert('✓ Read test successful! Found ' + (readResult.data?.length || 0) + ' samples in sheet.');
+                    } else {
+                        alert('✗ Read test failed: ' + readResult.error);
+                    }
+                } catch (e) {
+                    console.error('Could not parse read response:', e);
+                    alert('✗ Read test failed: Could not parse response\n\nResponse: ' + readText.substring(0, 200));
+                }
+                
+                // Second test: Try to write (if we have samples)
+                if (samples.length > 0) {
+                    console.log('Test 2: Writing to sheet...');
+                    await pushToSheet();
+                } else {
+                    console.log('No samples to write. Add a sample first.');
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                alert('✗ Connection test failed!\n\nError: ' + error.message + '\n\nThis might be a CORS issue. Try:\n1. Opening the HTML file via a local server (not file://)\n2. Or hosting it online\n\nCheck console (F12) for details.');
+            }
+        }
+
+        // Push samples to Google Sheets
+        async function pushToSheet() {
+            try {
+                console.log('=== Pushing to Google Sheets ===');
+                console.log('Samples to push:', samples.length);
+                console.log('Web App URL:', WEB_APP_URL);
+                
+                if (samples.length === 0) {
+                    console.log('No samples to push');
+                    return;
+                }
+                
+                const payload = {
+                    action: 'write',
+                    data: samples
+                };
+                
+                console.log('Payload:', JSON.stringify(payload).substring(0, 200) + '...');
+                
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                    redirect: 'follow'
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                const text = await response.text();
+                console.log('Raw response (first 500 chars):', text.substring(0, 500));
+                
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    // Try to extract JSON from HTML response (sometimes GAS returns HTML wrapper)
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        result = JSON.parse(jsonMatch[0]);
+                    } else {
+                        throw new Error('Could not parse response. Status: ' + response.status + '\nResponse: ' + text.substring(0, 200));
+                    }
+                }
+                
+                console.log('Parsed result:', result);
+                
+                if (!result.success) {
+                    console.error('Push error:', result.error);
+                    alert('Failed to sync to Google Sheets: ' + result.error);
+                } else {
+                    console.log('✓ Successfully synced', result.message || samples.length + ' samples to Google Sheets');
+                    // Don't show alert on success to avoid interrupting workflow
+                }
+            } catch (error) {
+                console.error('=== Push Error Details ===');
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                    alert('CORS Error: Cannot connect to Google Sheets.\n\nThis usually happens when opening HTML files directly (file://).\n\nSolutions:\n1. Use a local web server (Python: python -m http.server)\n2. Upload to a web host\n3. Use Google Drive to host the HTML file\n\nCheck console (F12) for full error details.');
+                } else {
+                    alert('Failed to sync to Google Sheets.\n\nError: ' + error.message + '\n\nCheck browser console (F12) for full details.');
+                }
+            }
+        }
+
+        // Pull samples from Google Sheets
+        async function pullFromSheet() {
+            try {
+                const response = await fetch(`${WEB_APP_URL}?action=read`);
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.length > 0) {
+                    // Merge with local data - sheet is source of truth
+                    samples = result.data;
+                    rebuildProfitHistory();
+                    saveSamples();
+                }
+            } catch (error) {
+                console.error('Pull error:', error);
+                // Silently fail - use local data if pull fails
+            }
+        }
+
+        // Event listeners
+        document.getElementById('ratio').addEventListener('input', updateRatioIndicator);
+        document.getElementById('date').addEventListener('input', formatDateInput);
+        document.getElementById('addSample').addEventListener('click', addSample);
+        document.getElementById('clearData').addEventListener('click', clearData);
+        document.getElementById('testSync').addEventListener('click', testSync);
+
+        // Event delegation for delete buttons
+        document.getElementById('samplesList').addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-sample-btn')) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                deleteSample(index);
+            }
+        });
+
+        // Allow Enter key to add sample
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT') {
+                addSample();
+            }
+        });
+
+        // Initialize
+        initChart();
+        loadSamples(); // Load saved samples first
+        
+        // Pull from Google Sheets on load (sheet is source of truth)
+        pullFromSheet().then(() => {
+            if (samples.length === 0) {
+                updateStats();
+                updateSamplesList();
+            }
+        });
+    </script>
+</body>
+</html>
