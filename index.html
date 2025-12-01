@@ -1035,12 +1035,38 @@
                 console.log('Response status:', response.status);
                 console.log('Response headers:', [...response.headers.entries()]);
                 
-                // Check if response is OK (200-299)
+                // Check if response is OK (200-299) - this is the real indicator of success
                 const isOk = response.ok || response.status === 200 || (response.status >= 200 && response.status < 300);
                 
                 const text = await response.text();
                 console.log('Raw response (first 500 chars):', text.substring(0, 500));
                 
+                // If HTTP response is successful, don't show any errors regardless of JSON content
+                if (isOk) {
+                    console.log('✓ HTTP response successful (status ' + response.status + '), sync completed');
+                    // Try to parse for logging, but don't fail if it doesn't work
+                    try {
+                        const result = JSON.parse(text);
+                        console.log('Parsed result:', result);
+                        if (result.success) {
+                            console.log('✓ Successfully synced', result.message || samples.length + ' samples to Google Sheets');
+                        }
+                    } catch (e) {
+                        // Try to extract JSON from HTML response
+                        const jsonMatch = text.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            try {
+                                const result = JSON.parse(jsonMatch[0]);
+                                console.log('Parsed result (from HTML):', result);
+                            } catch (e2) {
+                                // Ignore parse errors if HTTP status is OK
+                            }
+                        }
+                    }
+                    return; // Success - exit early
+                }
+                
+                // Only parse and check for errors if HTTP response was not OK
                 let result;
                 try {
                     result = JSON.parse(text);
@@ -1050,27 +1076,24 @@
                     if (jsonMatch) {
                         result = JSON.parse(jsonMatch[0]);
                     } else {
-                        // If response status is OK, assume success even if we can't parse
-                        if (isOk) {
-                            console.log('✓ Response status OK, assuming success despite parse error');
+                        // HTTP status was not OK, so this is a real error
+                        if (showErrors) {
+                            throw new Error('Could not parse response. Status: ' + response.status + '\nResponse: ' + text.substring(0, 200));
+                        } else {
+                            console.warn('Could not parse response. Status:', response.status);
                             return;
                         }
-                        throw new Error('Could not parse response. Status: ' + response.status + '\nResponse: ' + text.substring(0, 200));
                     }
                 }
                 
                 console.log('Parsed result:', result);
                 
-                // Only show error if result explicitly says failure AND showErrors is true
-                // Also check response status - if it's OK, don't show error even if result.success is false
-                if (!result.success && !isOk && showErrors) {
+                // Only show error if HTTP status was not OK AND showErrors is true
+                if (!result.success && showErrors) {
                     console.error('Push error:', result.error);
-                    alert('Failed to sync to Google Sheets: ' + result.error);
-                } else if (result.success || isOk) {
-                    console.log('✓ Successfully synced', result.message || samples.length + ' samples to Google Sheets');
-                } else if (showErrors) {
-                    // Only log to console if not showing errors
-                    console.warn('Sync completed but result.success was false. Response status:', response.status);
+                    alert('Failed to sync to Google Sheets: ' + (result.error || 'Unknown error'));
+                } else if (!result.success) {
+                    console.warn('Sync may have failed. Response status:', response.status, 'Error:', result.error);
                 }
             } catch (error) {
                 console.error('=== Push Error Details ===');
