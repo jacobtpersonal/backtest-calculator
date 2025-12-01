@@ -952,13 +952,14 @@
         }
 
         // Google Sheets Sync
-        // Auto-detect the script URL (works when hosted via Google Apps Script)
         const DEPLOYMENT_ID = 'AKfycbw309i947Ye3hdq_5x4KY4KL3eqZT3d4NoHFt5jQcyalfPplp5l8DWgphTj5FJEleCZ';
-        // If running from Google Apps Script HTML Service, use the same script URL
-        const isHosted = window.location.href.includes('script.google.com');
-        const WEB_APP_URL = isHosted 
-            ? window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/exec')
-            : `https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec`;
+        const GAS_URL = `https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec`;
+        
+        // Use CORS proxy as fallback (free public proxy)
+        // This bypasses CORS restrictions
+        const USE_CORS_PROXY = true; // Set to false if you want to try direct connection
+        const CORS_PROXY = 'https://corsproxy.io/?';
+        const WEB_APP_URL = USE_CORS_PROXY ? CORS_PROXY + encodeURIComponent(GAS_URL) : GAS_URL;
 
         // Test Google Sheets connection
         async function testSync() {
@@ -969,7 +970,10 @@
             try {
                 // First test: Try to read
                 console.log('Test 1: Reading from sheet...');
-                const readResponse = await fetch(`${WEB_APP_URL}?action=read`);
+                const readUrl = USE_CORS_PROXY 
+                    ? CORS_PROXY + encodeURIComponent(`${GAS_URL}?action=read`)
+                    : `${WEB_APP_URL}?action=read`;
+                const readResponse = await fetch(readUrl);
                 const readText = await readResponse.text();
                 console.log('Read response:', readText);
                 
@@ -1073,7 +1077,10 @@
         // Pull samples from Google Sheets
         async function pullFromSheet() {
             try {
-                const response = await fetch(`${WEB_APP_URL}?action=read`);
+                const readUrl = USE_CORS_PROXY 
+                    ? CORS_PROXY + encodeURIComponent(`${GAS_URL}?action=read`)
+                    : `${WEB_APP_URL}?action=read`;
+                const response = await fetch(readUrl);
                 const result = await response.json();
 
                 if (result.success && result.data && result.data.length > 0) {
