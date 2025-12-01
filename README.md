@@ -1,2 +1,0 @@
-# backtest-calculator
-backtest calculator
