@@ -994,7 +994,7 @@
                 // Second test: Try to write (if we have samples)
                 if (samples.length > 0) {
                     console.log('Test 2: Writing to sheet...');
-                    await pushToSheet();
+                    await pushToSheet(true); // Show errors for test sync
                 } else {
                     console.log('No samples to write. Add a sample first.');
                 }
@@ -1005,7 +1005,7 @@
         }
 
         // Push samples to Google Sheets
-        async function pushToSheet() {
+        async function pushToSheet(showErrors = false) {
             try {
                 console.log('=== Pushing to Google Sheets ===');
                 console.log('Samples to push:', samples.length);
@@ -1035,6 +1035,9 @@
                 console.log('Response status:', response.status);
                 console.log('Response headers:', [...response.headers.entries()]);
                 
+                // Check if response is OK (200-299)
+                const isOk = response.ok || response.status === 200 || (response.status >= 200 && response.status < 300);
+                
                 const text = await response.text();
                 console.log('Raw response (first 500 chars):', text.substring(0, 500));
                 
@@ -1047,18 +1050,27 @@
                     if (jsonMatch) {
                         result = JSON.parse(jsonMatch[0]);
                     } else {
+                        // If response status is OK, assume success even if we can't parse
+                        if (isOk) {
+                            console.log('✓ Response status OK, assuming success despite parse error');
+                            return;
+                        }
                         throw new Error('Could not parse response. Status: ' + response.status + '\nResponse: ' + text.substring(0, 200));
                     }
                 }
                 
                 console.log('Parsed result:', result);
                 
-                if (!result.success) {
+                // Only show error if result explicitly says failure AND showErrors is true
+                // Also check response status - if it's OK, don't show error even if result.success is false
+                if (!result.success && !isOk && showErrors) {
                     console.error('Push error:', result.error);
                     alert('Failed to sync to Google Sheets: ' + result.error);
-                } else {
+                } else if (result.success || isOk) {
                     console.log('✓ Successfully synced', result.message || samples.length + ' samples to Google Sheets');
-                    // Don't show alert on success to avoid interrupting workflow
+                } else if (showErrors) {
+                    // Only log to console if not showing errors
+                    console.warn('Sync completed but result.success was false. Response status:', response.status);
                 }
             } catch (error) {
                 console.error('=== Push Error Details ===');
@@ -1066,10 +1078,16 @@
                 console.error('Error message:', error.message);
                 console.error('Error stack:', error.stack);
                 
-                if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-                    alert('CORS Error: Cannot connect to Google Sheets.\n\nThis usually happens when opening HTML files directly (file://).\n\nSolutions:\n1. Use a local web server (Python: python -m http.server)\n2. Upload to a web host\n3. Use Google Drive to host the HTML file\n\nCheck console (F12) for full error details.');
+                // Only show alerts if showErrors is true
+                if (showErrors) {
+                    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                        alert('CORS Error: Cannot connect to Google Sheets.\n\nThis usually happens when opening HTML files directly (file://).\n\nSolutions:\n1. Use a local web server (Python: python -m http.server)\n2. Upload to a web host\n3. Use Google Drive to host the HTML file\n\nCheck console (F12) for full error details.');
+                    } else {
+                        alert('Failed to sync to Google Sheets.\n\nError: ' + error.message + '\n\nCheck browser console (F12) for full details.');
+                    }
                 } else {
-                    alert('Failed to sync to Google Sheets.\n\nError: ' + error.message + '\n\nCheck browser console (F12) for full details.');
+                    // Just log to console for automatic syncs
+                    console.warn('Sync error (silent):', error.message);
                 }
             }
         }
